@@ -23,4 +23,10 @@
     <color name="immersive_cling_button_text_color">@android:color/white</color>
     <color name="notification_text_default_color">@android:color/notification_default_color</color>
     <color name="sender_text_color">@android:color/black</color>
+
+ <!-- Whether doze should invert colors for notifications. If the RRO theme causes		
+    the NORMAL notification background to be dark and the text to be light, this boolean		
+    needs to be set to false, to prevent the doze notifications from being light -->		
+    <bool name="config_invert_colors_on_doze">true</bool>		
+
 </resources>
