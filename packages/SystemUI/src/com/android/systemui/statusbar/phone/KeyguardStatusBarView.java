@@ -34,6 +34,7 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.android.internal.util.aicp.AicpUtils;
+import com.android.systemui.BatteryMeterDrawable;
 import com.android.systemui.BatteryMeterView;
 import com.android.systemui.Interpolators;
 import com.android.systemui.R;
@@ -57,6 +58,9 @@ public class KeyguardStatusBarView extends RelativeLayout
     private static final String STATUS_BAR_SHOW_BATTERY_PERCENT =
             "cmsystem:" + CMSettings.System.STATUS_BAR_SHOW_BATTERY_PERCENT;
 
+    private static final String STATUS_BAR_BATTERY_STYLE =
+            "cmsystem:" + CMSettings.System.STATUS_BAR_BATTERY_STYLE;
+
     private boolean mBatteryCharging;
     private boolean mKeyguardUserSwitcherShowing;
     private boolean mBatteryListening;
@@ -78,6 +82,7 @@ public class KeyguardStatusBarView extends RelativeLayout
     private View mSystemIconsContainer;
 
     private boolean mShowBatteryText;
+    private boolean mForceBatteryText;
 
     private ContentObserver mObserver = new ContentObserver(new Handler()) {
         public void onChange(boolean selfChange, Uri uri) {
@@ -92,7 +97,7 @@ public class KeyguardStatusBarView extends RelativeLayout
     }
 
     private void showStatusBarCarrier() {
-        mShowCarrierLabel = Settings.System.getIntForUser(getContext().getContentResolver(),
+        mShowCarrierLabel = AicpUtils.isWifiOnly(getContext()) ? 0 : Settings.System.getIntForUser(getContext().getContentResolver(),
                 Settings.System.STATUS_BAR_SHOW_CARRIER, 1, UserHandle.USER_CURRENT);
     }
 
@@ -105,9 +110,6 @@ public class KeyguardStatusBarView extends RelativeLayout
         mMultiUserAvatar = (ImageView) findViewById(R.id.multi_user_avatar);
         mBatteryLevel = (TextView) findViewById(R.id.battery_level);
         mCarrierLabel = (TextView) findViewById(R.id.keyguard_carrier_text);
-        if (AicpUtils.isWifiOnly(getContext())) {
-            mCarrierLabel.setText("");
-        }
         loadDimens();
         updateUserSwitcher();
         updateVisibilities();
@@ -199,8 +201,7 @@ public class KeyguardStatusBarView extends RelativeLayout
             }
         }
         mBatteryLevel.setVisibility(
-                mBatteryCharging || mShowBatteryText ? View.VISIBLE : View.GONE);
-
+                mBatteryCharging || mShowBatteryText || mForceBatteryText ? View.VISIBLE : View.GONE);
         if (mCarrierLabel != null) {
             if (mShowCarrierLabel == 1) {
                 mCarrierLabel.setVisibility(View.VISIBLE);
@@ -234,7 +235,8 @@ public class KeyguardStatusBarView extends RelativeLayout
         }
         mBatteryListening = listening;
         if (mBatteryListening) {
-            TunerService.get(getContext()).addTunable(this, STATUS_BAR_SHOW_BATTERY_PERCENT);
+            TunerService.get(getContext()).addTunable(this,
+                    STATUS_BAR_SHOW_BATTERY_PERCENT, STATUS_BAR_BATTERY_STYLE);
             mBatteryController.addStateChangedCallback(this);
         } else {
             mBatteryController.removeStateChangedCallback(this);
@@ -383,6 +385,10 @@ public class KeyguardStatusBarView extends RelativeLayout
     public void onTuningChanged(String key, String newValue) {
         if (key.equals(STATUS_BAR_SHOW_BATTERY_PERCENT)) {
             mShowBatteryText = newValue == null ? false : Integer.parseInt(newValue) == 2;
+            updateVisibilities();
+        } else if (key.equals(STATUS_BAR_BATTERY_STYLE)) {
+            mForceBatteryText = newValue != null
+                    && Integer.parseInt(newValue) == BatteryMeterDrawable.BATTERY_STYLE_TEXT;
             updateVisibilities();
         }
     }
